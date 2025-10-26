@@ -1,13 +1,52 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import type { DragEvent } from "react";
 import { ApiClient, createEventStream } from "./api";
 import type { SessionDetail, SessionSummary } from "./types";
 
 type LogEntry = { ts: string; message: string };
 
 const formatDate = (value?: string | null) => {
-  if (!value) return "—";
+  if (!value) return "-";
   return new Date(value).toLocaleString();
 };
+
+function DropZone({ onFiles }: { onFiles: (files: File[]) => void }) {
+  const [active, setActive] = useState(false);
+
+  const handleDrop = (event: DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    setActive(false);
+    const files = Array.from(event.dataTransfer.files).filter((file) => file.type.startsWith("image/"));
+    if (files.length) {
+      onFiles(files);
+    }
+  };
+
+  return (
+    <div
+      onDragOver={(event) => {
+        event.preventDefault();
+        setActive(true);
+      }}
+      onDragLeave={(event) => {
+        event.preventDefault();
+        setActive(false);
+      }}
+      onDrop={handleDrop}
+      style={{
+        border: "2px dashed #94a3b8",
+        borderRadius: "0.75rem",
+        padding: "1rem",
+        marginBottom: "1rem",
+        textAlign: "center",
+        background: active ? "#e0f2fe" : "transparent",
+        color: "#0f172a",
+      }}
+    >
+      Перетащите изображения сюда или вставьте их из буфера обмена (Ctrl + V).
+    </div>
+  );
+}
 
 export default function App() {
   const [sessions, setSessions] = useState<SessionSummary[]>([]);
@@ -87,11 +126,12 @@ export default function App() {
     }
   };
 
-  const handleUpload = async (files: FileList | null) => {
+  const handleUpload = async (files: FileList | File[] | null) => {
     if (!selectedId || !files || files.length === 0) return;
+    const payload = files instanceof FileList ? Array.from(files) : files;
     setLoading(true);
     try {
-      const detail = await ApiClient.uploadPages(selectedId, files);
+      const detail = await ApiClient.uploadPages(selectedId, payload);
       setSelectedSession(detail);
       refreshSessions();
     } catch (err) {
@@ -100,6 +140,25 @@ export default function App() {
       setLoading(false);
     }
   };
+  useEffect(() => {
+    const onPaste = async (event: ClipboardEvent) => {
+      if (!selectedId) return;
+      const items = event.clipboardData?.items;
+      if (!items) return;
+      const images: File[] = [];
+      for (const item of items) {
+        if (item.kind === "file" && item.type.startsWith("image/")) {
+          const file = item.getAsFile();
+          if (file) images.push(file);
+        }
+      }
+      if (images.length) {
+        await handleUpload(images);
+      }
+    };
+    window.addEventListener("paste", onPaste);
+    return () => window.removeEventListener("paste", onPaste);
+  }, [selectedId]);
 
   const handleRecognize = async () => {
     if (!selectedId) return;
@@ -228,6 +287,7 @@ export default function App() {
 
               <section className="panel">
                 <h3>Страницы</h3>
+                <DropZone onFiles={(files) => handleUpload(files)} />
                 <div className="pages-grid">
                   {selectedSession.pages.map((page) => (
                     <div key={page.id} className="page-card">
