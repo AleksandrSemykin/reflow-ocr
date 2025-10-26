@@ -74,11 +74,13 @@ export default function App() {
     return () => source.close();
   }, [selectedId, loadSelectedSession, refreshSessions]);
 
+  const [newSessionName, setNewSessionName] = useState("");
+
   const handleCreateSession = async () => {
-    const name = window.prompt("Название сессии", `Сессия ${new Date().toLocaleString()}`) ?? undefined;
     try {
-      const created = await ApiClient.createSession(name);
+      const created = await ApiClient.createSession(newSessionName || undefined);
       setSelectedId(created.id);
+      setNewSessionName("");
       await refreshSessions();
     } catch (err) {
       setError((err as Error).message);
@@ -149,9 +151,18 @@ export default function App() {
           <h1>Reflow OCR</h1>
           <p>Локальный OCR-процесс с максимальной точностью и экспортом DOCX/PDF/MD.</p>
         </div>
-        <button className="button" onClick={handleCreateSession}>
-          + Новая сессия
-        </button>
+        <div className="actions">
+          <input
+            type="text"
+            placeholder="Название сессии"
+            value={newSessionName}
+            onChange={(e) => setNewSessionName(e.target.value)}
+            style={{ padding: "0.5rem", borderRadius: "0.5rem", border: "none", flex: 1 }}
+          />
+          <button className="button" onClick={handleCreateSession}>
+            + Новая сессия
+          </button>
+        </div>
       </header>
 
       <div className="layout">

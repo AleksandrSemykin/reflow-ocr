@@ -1,13 +1,9 @@
 const { app, BrowserWindow, shell } = require("electron");
 const path = require("node:path");
-const { fileURLToPath } = require("node:url");
 
 const isDev = Boolean(process.env.VITE_DEV_SERVER_URL);
 
-const resolvePath = (...segments) => {
-  const dirname = path.dirname(fileURLToPath(__filename));
-  return path.join(dirname, "..", ...segments);
-};
+const resolvePath = (...segments) => path.join(__dirname, "..", ...segments);
 
 const createWindow = async () => {
   const win = new BrowserWindow({
@@ -26,7 +22,9 @@ const createWindow = async () => {
 
   if (isDev && process.env.VITE_DEV_SERVER_URL) {
     await win.loadURL(process.env.VITE_DEV_SERVER_URL);
-    win.webContents.openDevTools();
+    if (process.env.OPEN_DEVTOOLS === "true") {
+      win.webContents.openDevTools();
+    }
   } else {
     await win.loadFile(resolvePath("dist", "index.html"));
   }
