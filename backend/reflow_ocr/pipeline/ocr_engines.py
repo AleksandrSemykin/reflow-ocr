@@ -8,6 +8,7 @@ from typing import Protocol
 import cv2
 import numpy as np
 
+from ..core.config import settings
 from ..schemas.document import DocumentBlock, TextSpan
 from .layout import LayoutBlock
 from .preprocess import pil_from_cv
@@ -16,6 +17,9 @@ try:
     import pytesseract  # type: ignore
 except ImportError:  # pragma: no cover - optional dependency
     pytesseract = None
+else:
+    if settings.tesseract_cmd:
+        pytesseract.pytesseract.tesseract_cmd = str(settings.tesseract_cmd)
 
 
 class OCREngine(Protocol):

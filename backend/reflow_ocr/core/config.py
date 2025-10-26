@@ -5,6 +5,7 @@ from __future__ import annotations
 from functools import lru_cache
 from pathlib import Path
 from typing import Literal
+import shutil
 
 from platformdirs import user_data_dir
 from pydantic import Field
@@ -16,6 +17,18 @@ def _default_data_dir() -> Path:
     return Path(user_data_dir(appname="ReflowOCR", appauthor="Reflow")).resolve()
 
 
+def _default_tesseract_cmd() -> Path | None:
+    candidates = [
+        Path("C:/Program Files/Tesseract-OCR/tesseract.exe"),
+        Path("C:/Program Files (x86)/Tesseract-OCR/tesseract.exe"),
+    ]
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate
+    exe = shutil.which("tesseract")
+    return Path(exe) if exe else None
+
+
 class Settings(BaseSettings):
     """Global application settings."""
 
@@ -25,6 +38,7 @@ class Settings(BaseSettings):
     data_dir: Path = Field(default_factory=_default_data_dir)
     log_level: str = "INFO"
     autosave_interval_seconds: int = 30
+    tesseract_cmd: Path | None = Field(default_factory=_default_tesseract_cmd)
 
     model_config = SettingsConfigDict(
         env_prefix="REFLOW_",
